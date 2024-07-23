@@ -4,7 +4,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,6 +18,8 @@ import javax.websocket.server.PathParam;
 
 import com.example.entity.Account;
 import com.example.entity.Message;
+import com.example.exception.InvalidMessageException;
+import com.example.exception.MessageNotFoundException;
 import com.example.service.MessageService;
 import com.example.service.AccountService;
 
@@ -26,18 +30,66 @@ import com.example.service.AccountService;
  * refer to prior mini-project labs and lecture materials for guidance on how a controller may be built.
  */
 @RestController
-
 public class SocialMediaController {
 
-    @Autowired
     private MessageService messageService;
-    @Autowired
     private AccountService accountService;
 
+    @Autowired
+    public SocialMediaController(MessageService messageService, AccountService accountService){
+        this.messageService = messageService;
+        this.accountService = accountService;
+    }
 
-    @GetMapping("/login")
-    public ResponseEntity<Optional<Account>> loginUser(@RequestBody Account account){
-        return new ResponseEntity<>(null, HttpStatus.OK);
+
+    @PostMapping("/messages")
+    public ResponseEntity<Message> createMessage(@RequestBody Message message){
+        try{
+            Message msg = messageService.createMessage(message);
+            return new ResponseEntity<>(msg, HttpStatus.OK);
+
+        }catch (Exception e){
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+
+
+
+
+
+
+
+    @PatchMapping("/messages/{message_id}")
+    public ResponseEntity<?> updateMessageById(@PathVariable int message_id, @RequestBody Message message){
+        try{
+            Message msg = messageService.updateMessageById(message_id, message);
+            if(msg == null) return ResponseEntity.badRequest().body("Test");
+            return ResponseEntity.ok(1);
+        }catch(Exception e){
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+    @PostMapping("/login")
+    public ResponseEntity<Account> loginUser(@RequestBody Account account){
+        try{
+            Account ac = accountService.loginUser(account.getUsername(), account.getPassword());
+            return new ResponseEntity<>(ac, HttpStatus.OK);
+        }catch(Exception e){
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
     }
 
     @PostMapping("/register")
@@ -51,16 +103,7 @@ public class SocialMediaController {
         
     }
 
-    @PostMapping("/messages")
-    public ResponseEntity<?> createMessage(@RequestBody Message message){
-        
-        try{
-            Message msg = messageService.createMessage(message);
-            return new ResponseEntity<>(msg, HttpStatus.OK);
-        }catch(Exception e){
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-        }
-    }
+    
 
     @GetMapping("/messages")
     public ResponseEntity<List<Message>> getAllMessages(){
@@ -81,5 +124,17 @@ public class SocialMediaController {
         else return new ResponseEntity<>(null, HttpStatus.OK);
 
     }
+    
+    @GetMapping("/accounts/{account_id}/messages")
+    public ResponseEntity<List<Message>> retrieveAllMessagesForUser(@PathVariable int account_id){
+        
+            List<Message> allMessage = accountService.retrieveAllMessagesForUser(account_id);
+            return new ResponseEntity<>(allMessage, HttpStatus.OK);
+    
+    }
+
+    
+    
+
 
 }
